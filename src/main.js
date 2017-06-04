@@ -9,7 +9,7 @@ class TestApp extends Controller {
 			j([Composer, {
 				create: () => this.create(),
 				join: (data) => this.join(data),
-				test: () => this.test(),
+				testLocal: () => this.testLocal(),
 			}]),
 		]);
 	}
@@ -26,7 +26,7 @@ class TestApp extends Controller {
 				j({textarea: {ref: (ref) => this.text = ref}}),
 				j({br: 0}),
 				j({button: {
-					onclick: () => this.peer.signal(JSON.parse(this.text.value))}
+					onclick: () => this.peer.signal(JSON.parse(this.text.value))},
 				}, ["connect"]),
 			];
 		});
@@ -71,6 +71,27 @@ class TestApp extends Controller {
 		this.messages.content.push(j({hr: 0}));
 		this.messages.content.push(`Them: ${message}`);
 	}
+	//local test
+	testLocal() {
+		const peer1 = new Peer({initiator: true});
+		const peer2 = new Peer();
+
+		peer1.on("signal", (data) => {
+			if (data.candidate && data.candidate.candidate.includes("host")) {
+				return;
+			}
+			peer2.signal(data);
+		});
+		peer2.on("signal", (data) => {
+			if (data.candidate && data.candidate.candidate.includes("host")) {
+				return;
+			}
+			peer1.signal(data);
+		});
+
+		peer1.on("connect", () => peer1.send("message from peer 1"));
+		peer2.on("data", (data) => console.log("peer 2 received message: " + data));
+	}
 }
 
 class Composer extends Controller {
@@ -81,6 +102,9 @@ class Composer extends Controller {
 			j({textarea: {ref: (ref) => this.text = ref}}),
 			j({br: 0}),
 			j({button: {onclick: this.join}}, ["join room"]),
+			j({br: 0}),
+			j({br: 0}),
+			j({button: {onclick: this.props.testLocal}}, ["local test"]),
 		]);
 	}
 	create() {
@@ -94,6 +118,7 @@ class Composer extends Controller {
 Composer.propTypes = {
 	create: required(Function),
 	join: required(Function),
+	testLocal: required(Function),
 };
 
 document.body.content = [
