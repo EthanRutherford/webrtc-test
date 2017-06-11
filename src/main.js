@@ -31,10 +31,11 @@ class TestApp extends Controller {
 			];
 		});
 
-		this.peer.on("connect", () => this.connect());
+		this.peer.on("connect", () => this.onConnect());
 	}
 	join(data) {
 		this.peer = new Peer({initiator: false, trickle: false});
+		this.peer.on("error", (error) => this.onError(error));
 		this.peer.signal(JSON.parse(data));
 
 		this.peer.on("signal", (data) => {
@@ -46,9 +47,9 @@ class TestApp extends Controller {
 			];
 		});
 
-		this.peer.on("connect", () => this.connect());
+		this.peer.on("connect", () => this.onConnect());
 	}
-	connect() {
+	onConnect() {
 		this.page.content = [
 			"Connected!",
 			j({br: 0}),
@@ -59,6 +60,9 @@ class TestApp extends Controller {
 			j({div: {ref: (ref) => this.messages = ref}}, [""]),
 		];
 		this.peer.on("data", (data) => this.receive(data));
+	}
+	onError(error) {
+		this.page.append(`error: ${error}`);
 	}
 	send() {
 		const message = this.text.value;
@@ -75,6 +79,8 @@ class TestApp extends Controller {
 	testLocal() {
 		const peer1 = new Peer({initiator: true});
 		const peer2 = new Peer();
+		peer1.on("error", (error) => this.onError(error));
+		peer2.on("error", (error) => this.onError(error));
 
 		peer1.on("signal", (data) => {
 			if (data.candidate && data.candidate.candidate.includes("host")) {
@@ -90,7 +96,9 @@ class TestApp extends Controller {
 		});
 
 		peer1.on("connect", () => peer1.send("message from peer 1"));
-		peer2.on("data", (data) => console.log("peer 2 received message: " + data));
+		peer2.on("data", (data) => {
+			this.page.append("peer 2 received message: " + data);
+		});
 	}
 }
 
