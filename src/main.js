@@ -1,5 +1,16 @@
+/* eslint-disable no-console */
 const {j, Controller, PropTypes: {required}} = require("jenny-js");
 const Peer = require("./simple-peer.min.js");
+
+function randomInt64(digits) {
+	const codes =
+		"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+	let string = "";
+	for (let x = 0; x < digits; x++) {
+		string += codes[Math.floor(Math.random() * codes.length)];
+	}
+	return string;
+}
 
 class TestApp extends Controller {
 	init() {
@@ -12,40 +23,49 @@ class TestApp extends Controller {
 		]);
 	}
 	create() {
-		this.peer = new Peer({initiator: true, trickle: false});
-
-		this.peer.on("signal", (data) => {
-			this.page.content = [
-				JSON.stringify(data),
-				j({br: 0}),
-				j({br: 0}),
-				j({div: 0}, ["send the above string to someone else to connect"]),
-				j({div: 0}, ["then paste their response in the box below"]),
-				j({textarea: {ref: (ref) => this.text = ref}}),
-				j({br: 0}),
-				j({button: {
-					onclick: () => this.peer.signal(JSON.parse(this.text.value))},
-				}, ["connect"]),
-			];
-		});
-
-		this.peer.on("connect", () => this.onConnect());
+		const id = randomInt64(6);
+		const wsUrl = `wss://flixync.rserver.us/signal/initiator/${id}`;
+		const signaller = new WebSocket(wsUrl);
+		signaller.onmessage = (message) => {
+			if (message.data === "ready") {
+				this.createPeer(signaller, true);
+			}
+		};
+		this.page.content = [
+			id,
+			j({br: 0}),
+			j({br: 0}),
+			j({div: 0}, ["send the above string to someone else to connect"]),
+		];
 	}
 	join(data) {
-		this.peer = new Peer({initiator: false, trickle: false});
-		this.peer.on("error", (error) => this.onError(error));
-		this.peer.signal(JSON.parse(data));
+		const id = data;
+		const wsUrl = `wss://flixync.rserver.us/signal/receptor/${id}`;
+		const signaller = new WebSocket(wsUrl);
+		signaller.onmessage = (message) => {
+			if (message.data === "ready") {
+				this.createPeer(signaller, false);
+			}
+		};
+		this.page.content = [
+			j({div: 0}, ["waiting for connection..."]),
+		];
+	}
+	createPeer(signaller, initiator) {
+		this.peer = new Peer({initiator});
 
 		this.peer.on("signal", (data) => {
-			this.page.content = [
-				JSON.stringify(data),
-				j({br: 0}),
-				j({br: 0}),
-				j({div: 0}, ["send the above string back to the other person"]),
-			];
+			signaller.send(JSON.stringify(data));
 		});
+		signaller.onmessage = (message) => {
+			this.peer.signal(JSON.parse(message.data));
+		};
+		this.peer.on("error", (error) => this.onError(error));
 
-		this.peer.on("connect", () => this.onConnect());
+		this.peer.on("connect", () => {
+			signaller.close();
+			this.onConnect();
+		});
 	}
 	onConnect() {
 		this.page.content = [
@@ -61,6 +81,7 @@ class TestApp extends Controller {
 	}
 	onError(error) {
 		this.page.append(`error: ${error}`);
+		this.page.append(j({br: 0}));
 	}
 	send() {
 		const message = this.text.value;
@@ -75,20 +96,35 @@ class TestApp extends Controller {
 	}
 	//local test
 	testLocal() {
+		console.log("beginning local test");
 		const peer1 = new Peer({initiator: true});
 		const peer2 = new Peer();
 		peer1.on("error", (error) => this.onError(error));
 		peer2.on("error", (error) => this.onError(error));
 
 		peer1.on("signal", (data) => {
-			if (data.candidate && data.candidate.candidate.includes("host")) {
-				return;
+			if (data.sdp) {
+				const lines = data.sdp.split("\r\n").filter((line) => !line.includes("host"));
+				data.sdp = lines.join("\r\n");
+				console.log(`peer1:\n\n${data.sdp}\n`);
+			} else {
+				if (data.candidate && data.candidate.candidate.includes("host")) {
+					return;
+				}
+				console.log(`peer1:\n\n${data.candidate.candidate}\n\n`);
 			}
 			peer2.signal(data);
 		});
 		peer2.on("signal", (data) => {
-			if (data.candidate && data.candidate.candidate.includes("host")) {
-				return;
+			if (data.sdp) {
+				const lines = data.sdp.split("\r\n").filter((line) => !line.includes("host"));
+				data.sdp = lines.join("\r\n");
+				console.log(`peer2:\n\n${data.sdp}\n`);
+			} else {
+				if (data.candidate && data.candidate.candidate.includes("host")) {
+					return;
+				}
+				console.log(`peer2:\n\n${data.candidate.candidate}\n\n`);
 			}
 			peer1.signal(data);
 		});
@@ -96,6 +132,8 @@ class TestApp extends Controller {
 		peer1.on("connect", () => peer1.send("message from peer 1"));
 		peer2.on("data", (data) => {
 			this.page.append("peer 2 received message: " + data);
+			this.page.append(j({br: 0}));
+			console.log("success!");
 		});
 	}
 }
