@@ -1,0 +1,5 @@
+{
+	"webroot": "../",
+	"outputDir": "./src",
+	"entryPoints": ["/webrtc-test/src/main"]
+}

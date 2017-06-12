@@ -1,0 +1,26 @@
+{
+  "name": "webrtc-test",
+  "version": "1.0.0",
+  "description": "just me testing webrtc",
+  "main": "",
+  "dependencies": {
+    "jenny-js": "^1.0.1",
+    "pre-req": "^1.1.1"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "build": "preload build",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "http-server ../"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/EthanRutherford/webrtc-test.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/EthanRutherford/webrtc-test/issues"
+  },
+  "homepage": "https://github.com/EthanRutherford/webrtc-test#readme"
+}

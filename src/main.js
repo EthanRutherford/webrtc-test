@@ -1,7 +1,5 @@
-//# preload ./simple-peer.min.js
-//# preload ./jenny.js
+const {j, Controller, PropTypes: {required}} = require("jenny-js");
 const Peer = require("./simple-peer.min.js");
-const {j, Controller, PropTypes: {required}} = require("./jenny.js");
 
 class TestApp extends Controller {
 	init() {
