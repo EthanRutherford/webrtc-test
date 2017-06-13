@@ -73,7 +73,15 @@ class TestApp extends Controller {
 			this.signaller.send(JSON.stringify({id, data}));
 		});
 
-		this.peers[id].on("error", (error) => this.onError(error));
+		this.peers[id].on("close", () => {
+			delete this.peers[id];
+		});
+
+		this.peers[id].on("error", (error) => {
+			this.onError(error);
+			this.peers[id].destroy();
+			delete this.peers[id];
+		});
 
 		this.peers[id].on("connect", () => this.onConnect(id));
 	}
