@@ -22,62 +22,75 @@ class TestApp extends Controller {
 			}]),
 		]);
 	}
+	didMount() {
+		this.peers = {};
+	}
 	create() {
-		const id = randomInt64(6);
-		const wsUrl = `wss://flixync.rserver.us/signal/initiator/${id}`;
-		const signaller = new WebSocket(wsUrl);
-		signaller.onmessage = (message) => {
-			if (message.data === "ready") {
-				this.createPeer(signaller, true);
-			}
+		this.roomId = randomInt64(6);
+		const wsUrl = `wss://flixync.rserver.us/signal/initiator/${this.roomId}`;
+		this.signaller = new WebSocket(wsUrl);
+		this.signaller.onmessage = (message) => {
+			const data = JSON.parse(message.data);
+			console.log(data);
+			this.acceptPeer(data);
 		};
 		this.page.content = [
-			id,
+			this.roomId,
 			j({br: 0}),
 			j({br: 0}),
 			j({div: 0}, ["send the above string to someone else to connect"]),
 		];
 	}
 	join(data) {
-		const id = data;
-		const wsUrl = `wss://flixync.rserver.us/signal/receptor/${id}`;
-		const signaller = new WebSocket(wsUrl);
-		signaller.onmessage = (message) => {
-			if (message.data === "ready") {
-				this.createPeer(signaller, false);
+		this.roomId = data;
+		const wsUrl = `wss://flixync.rserver.us/signal/receptor/${this.roomId}`;
+		this.signaller = new WebSocket(wsUrl);
+		this.signaller.onmessage = (message) => {
+			const data = JSON.parse(message.data);
+			console.log(data);
+			if (data.clients) {
+				for (const client of data.clients) {
+					this.createPeer(client, true);
+				}
+			} else {
+				this.acceptPeer(data);
 			}
 		};
 		this.page.content = [
-			j({div: 0}, ["waiting for connection..."]),
+			j({div: 0}, ["connecting to peers..."]),
 		];
 	}
-	createPeer(signaller, initiator) {
-		this.peer = new Peer({initiator});
-
-		this.peer.on("signal", (data) => {
-			signaller.send(JSON.stringify(data));
-		});
-		signaller.onmessage = (message) => {
-			this.peer.signal(JSON.parse(message.data));
-		};
-		this.peer.on("error", (error) => this.onError(error));
-
-		this.peer.on("connect", () => {
-			signaller.close();
-			this.onConnect();
-		});
+	acceptPeer(data) {
+		if (!this.peers[data.id]) {
+			this.createPeer(data.id, false);
+		}
+		this.peers[data.id].signal(data.data);
 	}
-	onConnect() {
-		this.page.content = [
-			"Connected!",
-			j({br: 0}),
-			j({br: 0}),
-			j({textarea: {ref: (ref) => this.text = ref}}),
-			j({br: 0}),
-			j({button: {onclick: () => this.send()}}, ["send message"]),
-			j({div: {ref: (ref) => this.messages = ref}}, [""]),
-		];
-		this.peer.on("data", (data) => this.receive(data));
+	createPeer(id, initiator) {
+		this.peers[id] = new Peer({initiator});
+
+		this.peers[id].on("signal", (data) => {
+			this.signaller.send(JSON.stringify({id, data}));
+		});
+
+		this.peers[id].on("error", (error) => this.onError(error));
+
+		this.peers[id].on("connect", () => this.onConnect(id));
+	}
+	onConnect(id) {
+		if (!this.connected) {
+			this.page.content = [
+				`Connected to room ${this.roomId}!`,
+				j({br: 0}),
+				j({br: 0}),
+				j({textarea: {ref: (ref) => this.text = ref}}),
+				j({br: 0}),
+				j({button: {onclick: () => this.send()}}, ["send message"]),
+				j({div: {ref: (ref) => this.messages = ref}}, [""]),
+			];
+			this.connected = true;
+		}
+		this.peers[id].on("data", (data) => this.receive(id, data));
 	}
 	onError(error) {
 		this.page.append(`error: ${error}`);
@@ -86,13 +99,15 @@ class TestApp extends Controller {
 	send() {
 		const message = this.text.value;
 		this.text.value = "";
-		this.peer.send(message);
+		for (const id in this.peers) {
+			this.peers[id].send(message);
+		}
 		this.messages.content.push(j({hr: 0}));
 		this.messages.content.push(`You: ${message}`);
 	}
-	receive(message) {
+	receive(id, message) {
 		this.messages.content.push(j({hr: 0}));
-		this.messages.content.push(`Them: ${message}`);
+		this.messages.content.push(`peer${id}: ${message}`);
 	}
 	//local test
 	testLocal() {
