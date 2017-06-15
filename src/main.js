@@ -12,6 +12,13 @@ function randomInt64(digits) {
 	return string;
 }
 
+function getQueries() {
+	return location.search.substr(1).split("&").reduce((x, y) => {
+		const z = y.split("=");
+		return Object.assign(x, {[z[0]]: z[1]});
+	}, {});
+}
+
 class TestApp extends Controller {
 	init() {
 		return j({div: {ref: (ref) => this.page = ref}}, [
@@ -24,32 +31,37 @@ class TestApp extends Controller {
 	}
 	didMount() {
 		this.peers = {};
+		const queries = getQueries();
+		if (queries.roomId) {
+			this.join(queries.roomId);
+		}
 	}
 	create() {
 		this.roomId = randomInt64(6);
+		this.linkUrl = location.origin + location.pathname + `?roomId=${this.roomId}`;
 		const wsUrl = `wss://flixync.rserver.us/signal/initiator/${this.roomId}`;
 		this.signaller = new WebSocket(wsUrl);
 		this.signaller.onmessage = (message) => {
 			const data = JSON.parse(message.data);
-			console.log(data);
 			this.acceptPeer(data);
 		};
 		this.page.content = [
-			this.roomId,
+			j({a: {href: this.linkUrl}}, [this.roomId]),
 			j({br: 0}),
 			j({br: 0}),
-			j({div: 0}, ["send the above string to someone else to connect"]),
+			j({div: 0}, ["send the above link to someone else to connect"]),
 		];
 	}
 	join(data) {
 		this.roomId = data;
+		this.linkUrl = location.origin + location.pathname + `?roomId=${this.roomId}`;
 		const wsUrl = `wss://flixync.rserver.us/signal/receptor/${this.roomId}`;
 		this.signaller = new WebSocket(wsUrl);
 		this.signaller.onmessage = (message) => {
 			const data = JSON.parse(message.data);
-			console.log(data);
 			if (data.clients) {
 				for (const client of data.clients) {
+					console.log(`creating connection with peer${client}`);
 					this.createPeer(client, true);
 				}
 			} else {
@@ -62,6 +74,7 @@ class TestApp extends Controller {
 	}
 	acceptPeer(data) {
 		if (!this.peers[data.id]) {
+			console.log(`negotiating connection with peer${data.id}`);
 			this.createPeer(data.id, false);
 		}
 		this.peers[data.id].signal(data.data);
@@ -74,6 +87,8 @@ class TestApp extends Controller {
 		});
 
 		this.peers[id].on("close", () => {
+			console.log(`connection with peer${id} lost`);
+			this.peers[id].destroy();
 			delete this.peers[id];
 		});
 
@@ -84,11 +99,22 @@ class TestApp extends Controller {
 		});
 
 		this.peers[id].on("connect", () => this.onConnect(id));
+
+		//WORKAROUND_HACK: https://github.com/feross/simple-peer/issues/178
+		const WORKAROUND_HACK = (data) => {
+			this.onConnect(id);
+			this.receive(id, data);
+		};
+		this.peers[id].once("connect", () => this.peers[id].removeListener("data", WORKAROUND_HACK));
+		this.peers[id].once("data", WORKAROUND_HACK);
 	}
 	onConnect(id) {
+		console.log(`connection with peer${id} succeeded`);
 		if (!this.connected) {
 			this.page.content = [
-				`Connected to room ${this.roomId}!`,
+				"Connected to room ",
+				j({a: {href: this.linkUrl}}, [this.roomId]),
+				"!",
 				j({br: 0}),
 				j({br: 0}),
 				j({textarea: {ref: (ref) => this.text = ref}}),
@@ -98,9 +124,18 @@ class TestApp extends Controller {
 			];
 			this.connected = true;
 		}
-		this.peers[id].on("data", (data) => this.receive(id, data));
+		if (!this.peers[id].hasBeenConnected) {
+			this.peers[id].on("data", (data) => this.receive(id, data));
+			this.peers[id].hasBeenConnected = true;
+
+			//WORKAROUND_HACK: send a few heartbeats
+			for (let x = 0; x < 20; x++) {
+				setTimeout(() => this.peers[id].send("\u200B"), x * 100);
+			}
+		}
 	}
 	onError(error) {
+		console.log(error);
 		this.page.append(`error: ${error}`);
 		this.page.append(j({br: 0}));
 	}
@@ -114,6 +149,9 @@ class TestApp extends Controller {
 		this.messages.content.push(`You: ${message}`);
 	}
 	receive(id, message) {
+		//WORKAROUND_HACK: ignore heartbeats
+		if (message + "" === "\u200B") return;
+
 		this.messages.content.push(j({hr: 0}));
 		this.messages.content.push(`peer${id}: ${message}`);
 	}
@@ -164,27 +202,16 @@ class TestApp extends Controller {
 class Composer extends Controller {
 	init() {
 		return j({div: {}}, [
-			j({button: {onclick: this.create}}, ["create room"]),
-			j({br: 0}),
-			j({textarea: {ref: (ref) => this.text = ref}}),
-			j({br: 0}),
-			j({button: {onclick: this.join}}, ["join room"]),
+			j({button: {onclick: this.props.create}}, ["create room"]),
 			j({br: 0}),
 			j({br: 0}),
 			j({button: {onclick: this.props.testLocal}}, ["local test"]),
 		]);
 	}
-	create() {
-		this.props.create();
-	}
-	join() {
-		this.props.join(this.text.value);
-	}
 }
 
 Composer.propTypes = {
 	create: required(Function),
-	join: required(Function),
 	testLocal: required(Function),
 };
 
