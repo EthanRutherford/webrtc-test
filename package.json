@@ -4,14 +4,15 @@
   "description": "just me testing webrtc",
   "main": "",
   "dependencies": {
+    "boxjs": "^1.0.0",
     "jenny-js": "^1.0.1",
-    "pre-req": "^1.1.1"
+    "pre-req": "^1.1.2"
   },
   "devDependencies": {},
   "scripts": {
     "build": "preload build",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "http-server ../"
+    "start": "start http-server ../"
   },
   "repository": {
     "type": "git",
