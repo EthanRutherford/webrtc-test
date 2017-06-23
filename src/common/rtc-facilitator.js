@@ -26,6 +26,7 @@ function createPeer(id, initiator) {
 	});
 
 	this.peers[id].on("error", (error) => {
+		console.log(error);
 		this.peers[id].destroy();
 		delete this.peers[id];
 		if (this._handlers.onError instanceof Function) {

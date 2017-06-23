@@ -13,9 +13,9 @@ class ChatApp extends Controller {
 	}
 	didMount() {
 		this.facilitator = new Facilitator();
-		this.facilitator.onConnect((...args) => this.onConnect(...args));
-		this.facilitator.onData((...args) => this.receive(...args));
-		this.facilitator.onError((...args) => this.onError(...args));
+		this.facilitator.onConnect(this.onConnect.bind(this));
+		this.facilitator.onData(this.receive.bind(this));
+		this.facilitator.onError(this.onError.bind(this));
 		const queries = getQueries();
 		if (queries.roomId) {
 			this.join(queries.roomId);
