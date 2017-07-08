@@ -102,6 +102,9 @@ module.exports = class RTCFacilitator {
 			}
 		};
 	}
+	closeRoom() {
+		this.signaller.close();
+	}
 	broadcast(data) {
 		for (const id in this.peers) {
 			this.peers[id].send(data);
