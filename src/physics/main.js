@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 const {j, Controller, PropTypes: {required}} = require("jenny-js");
 const {randomInt64, getQueries} = require("../common/util");
 const Facilitator = require("../common/rtc-facilitator");

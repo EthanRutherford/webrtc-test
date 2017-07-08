@@ -4,9 +4,9 @@
   "description": "just me testing webrtc",
   "main": "",
   "dependencies": {
-    "boxjs": "^1.0.0",
+    "boxjs": "^1.0.1",
     "jenny-js": "^1.0.1",
-    "pre-req": "^1.1.2"
+    "pre-req": "^1.2.4"
   },
   "devDependencies": {},
   "scripts": {
