@@ -17,7 +17,6 @@ class Doodle extends Controller {
 	didMount() {
 		this.context = this.canvas.getContext("2d");
 		const hue = ((this.props.id * 5) % 12) * 30;
-		console.log(hue);
 		this.context.strokeStyle = `hsl(${hue}, 75%, 40%)`;
 		this.context.lineWidth = 4;
 		this.context.lineCap = "round";
