@@ -1,0 +1,14 @@
+<html>
+	<head>
+		<title>psychopath prototype</title>
+		<script src="../preload_modules/preload.js"></script>
+	</head>
+	<body>
+		<script>
+			preload.require("../preload_modules/.deps.json").then((deps) => {
+				preload.define(deps);
+				preload.main("./main.js");
+			});
+		</script>
+	</body>
+</html>

@@ -3,6 +3,7 @@
 	"outputDir": "./src",
 	"entryPoints": [
 		"/webrtc-test/src/chatroom/main",
-		"/webrtc-test/src/physics/main"
+		"/webrtc-test/src/physics/main",
+		"/webrtc-test/src/psychopath/main"
 	]
 }

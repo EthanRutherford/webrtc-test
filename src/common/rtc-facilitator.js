@@ -84,7 +84,12 @@ module.exports = class RTCFacilitator {
 		this.signaller = new WebSocket(wsUrl);
 		this.signaller.onmessage = (message) => {
 			const data = JSON.parse(message.data);
-			acceptPeer.call(this, data);
+			if (data.yourId != null) {
+				this.id = Number.parseInt(data.yourId, 10);
+			}
+			if (data.id != null && data.data != null) {
+				acceptPeer.call(this, data);
+			}
 		};
 	}
 	joinRoom(roomId) {
@@ -92,12 +97,16 @@ module.exports = class RTCFacilitator {
 		this.signaller = new WebSocket(wsUrl);
 		this.signaller.onmessage = (message) => {
 			const data = JSON.parse(message.data);
-			if (data.clients) {
+			if (data.clients != null) {
 				for (const client of data.clients) {
 					console.log(`creating connection with peer${client}`);
 					createPeer.call(this, client, true);
 				}
-			} else {
+			}
+			if (data.yourId != null) {
+				this.id = Number.parseInt(data.yourId, 10);
+			}
+			if (data.id != null && data.data != null) {
 				acceptPeer.call(this, data);
 			}
 		};
