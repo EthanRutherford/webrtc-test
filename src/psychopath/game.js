@@ -18,6 +18,7 @@ class Game extends Controller {
 Game.propTypes = {
 	facilitator: required(Facilitator),
 	playerName: required(String),
+	playerDoodle: required(String),
 };
 
 module.exports = Game;

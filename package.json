@@ -5,12 +5,13 @@
   "main": "",
   "dependencies": {
     "boxjs": "^1.0.1",
-    "jenny-js": "^1.0.2",
-    "pre-req": "^1.2.4"
+    "jenny-js": "^1.0.3",
+    "pre-req": "^1.4.1"
   },
   "devDependencies": {},
   "scripts": {
     "build": "preload build",
+    "rebuild": "preload rebuild",
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "start http-server ../"
   },

@@ -7,7 +7,7 @@ class Doodle extends Controller {
 				onmousedown: this.onMouseDown.bind(this),
 				height: 200,
 				width: 200,
-				style: "border: 1px solid black",
+				style: {border: "1px solid black"},
 				ref: (ref) => this.canvas = ref,
 			}}),
 			j({br: 0}),

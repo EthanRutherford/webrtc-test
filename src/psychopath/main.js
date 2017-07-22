@@ -1,8 +1,8 @@
 const {j, Controller, PropTypes: {required}} = require("jenny-js");
-const {randomInt64, getQueries} = require("../common/util");
+const {randomInt64, getQueries, throttle} = require("../common/util");
 const Facilitator = require("../common/rtc-facilitator");
-const Game = require("./game.js");
-const Doodle = require("./doodle.js");
+const Game = require("./game");
+const Doodle = require("./doodle");
 
 class PsychopathApp extends Controller {
 	init() {
@@ -96,23 +96,22 @@ class PsychopathApp extends Controller {
 		if (!this.list) return;
 		const content = [j({h4: 0}, ["Players"])];
 		content.push(j({div: 0}, [
-			`You: ${this.playerName || "(unnamed)"}`,
+			this.playerName || "(unnamed)",
 			j({br: 0}),
 			this.playerDoodle ? j({img: {
 				src: this.playerDoodle,
-				style: "border: 1px solid black",
+				style: {border: "1px solid black"},
 			}}) : null,
 		]));
 		for (const peerId in this.facilitator.peers) {
 			const peer = this.facilitator.peers[peerId];
-			const name = peer.playerName || "(unnamed)";
 			const doodle = peer.playerDoodle;
 			content.push(j({div: 0}, [
-				`${peerId}: ${name}`,
+				peer.playerName || "(unnamed)",
 				j({br: 0}),
 				doodle ? j({img: {
 					src: doodle,
-					style: "border: 1px solid black",
+					style: {border: "1px solid black"},
 				}}) : null,
 			]));
 		}
@@ -123,6 +122,7 @@ class PsychopathApp extends Controller {
 			j([Game, {
 				facilitator: this.facilitator,
 				playerName: this.playerName,
+				playerDoodle: this.playerDoodle,
 			}]),
 		];
 		if (initiator) {
@@ -141,7 +141,7 @@ class Lobby extends Controller {
 				oninput: this.onChange.bind(this),
 				ref: (ref) => this.input = ref,
 			}}),
-			j([Doodle, {id: this.props.id, onChange: this.props.changeDoodle}]),
+			j([Doodle, {id: this.props.id, onChange: throttle(this.props.changeDoodle, 50)}]),
 			j({br: 0}),
 			j({button: {onclick: this.props.startGame}}, ["close lobby and begin"]),
 		]);

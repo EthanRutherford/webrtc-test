@@ -15,7 +15,43 @@ function getQueries() {
 	}, {});
 }
 
+function throttle(func, minTime) {
+	let lastCall = 0;
+	let theArgs;
+
+	return (...args) => {
+		const timeSince = Date.now() - lastCall;
+		theArgs = args;
+
+		if (timeSince > minTime) {
+			func(...theArgs);
+			lastCall = Date.now();
+		} else {
+			setTimeout(() => {
+				func(...theArgs);
+				lastCall = Date.now();
+			}, minTime - timeSince);
+		}
+	};
+}
+
+function debounce(func, waitTime) {
+	let timeout;
+	let theArgs;
+
+	return (...args) => {
+		theArgs = args;
+
+		clearTimeout(timeout);
+		timeout = setTimeout(() => {
+			func(...theArgs);
+		}, waitTime);
+	};
+}
+
 module.exports = {
 	randomInt64,
 	getQueries,
+	throttle,
+	debounce,
 };

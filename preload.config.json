@@ -5,5 +5,18 @@
 		"/webrtc-test/src/chatroom/main",
 		"/webrtc-test/src/physics/main",
 		"/webrtc-test/src/psychopath/main"
-	]
+	],
+	"html": [{
+		"main": "/webrtc-test/src/chatroom/main",
+		"html": "/webrtc-test/src/chatroom/index.html",
+		"template": "./.templates/chatroom.html"
+	}, {
+		"main": "/webrtc-test/src/physics/main",
+		"html": "/webrtc-test/src/physics/index.html",
+		"template": "./.templates/physics.html"
+	}, {
+		"main": "/webrtc-test/src/psychopath/main",
+		"html": "/webrtc-test/src/psychopath/index.html",
+		"template": "./.templates/psychopath.html"
+	}]
 }

@@ -1,14 +1,10 @@
 <html>
 	<head>
-		<title>psychopath prototype</title>
-		<script src="../preload_modules/preload.js"></script>
+		<title>psychopath prototypet</title>
+
+<script id="pre-req" src="/webrtc-test/src/preload_modules/preload.js" async></script>
+<script>document.getElementById("pre-req").onload = () => {preload.define({"files":{"webrtc-test":{"src":{"psychopath":{"main.js":{"/deps":["jenny-js","/webrtc-test/src/common/util.js","/webrtc-test/src/common/rtc-facilitator.js","/webrtc-test/src/psychopath/game.js","/webrtc-test/src/psychopath/doodle.js"]},"doodle.js":{"/deps":["jenny-js"]},"game.js":{"/deps":["jenny-js","/webrtc-test/src/common/rtc-facilitator.js"]}},"common":{"rtc-facilitator.js":{"/deps":["/webrtc-test/src/common/simple-peer.min.js"]},"simple-peer.min.js":{"/deps":[]},"util.js":{"/deps":[]}},"physics":{"main.js":{"/deps":["jenny-js","/webrtc-test/src/common/util.js","/webrtc-test/src/common/rtc-facilitator.js","/webrtc-test/src/physics/game.js"]},"game.js":{"/deps":["jenny-js","boxjs"]}},"chatroom":{"main.js":{"/deps":["jenny-js","/webrtc-test/src/common/util.js","/webrtc-test/src/common/rtc-facilitator.js"]}}}}},"packages":{"jenny-js":{"/deps":[]},"boxjs":{"/deps":[]}},"outputDir":"/webrtc-test/src/"});preload.main("/webrtc-test/src/psychopath/main.js")};</script>
 	</head>
 	<body>
-		<script>
-			preload.require("../preload_modules/.deps.json").then((deps) => {
-				preload.define(deps);
-				preload.main("./main.js");
-			});
-		</script>
 	</body>
 </html>
