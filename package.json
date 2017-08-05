@@ -6,7 +6,7 @@
   "dependencies": {
     "boxjs": "^1.0.1",
     "jenny-js": "^1.0.3",
-    "pre-req": "^1.4.1"
+    "pre-req": "^1.4.2"
   },
   "devDependencies": {},
   "scripts": {

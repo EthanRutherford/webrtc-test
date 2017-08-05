@@ -1,13 +1,14 @@
 const {j, Controller, PropTypes: {required}} = require("jenny-js");
+const styles = require("./styles.css");
 
 class Doodle extends Controller {
 	init() {
 		return j({div: 0}, [
 			j({canvas: {
+				class: styles.bordered,
 				onmousedown: this.onMouseDown.bind(this),
 				height: 200,
 				width: 200,
-				style: {border: "1px solid black"},
 				ref: (ref) => this.canvas = ref,
 			}}),
 			j({br: 0}),

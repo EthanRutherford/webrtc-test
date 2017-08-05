@@ -1,8 +1,11 @@
+/* global preload */
+preload.onCss(require("../common/css-loader"));
 const {j, Controller, PropTypes: {required}} = require("jenny-js");
 const {randomInt64, getQueries, throttle} = require("../common/util");
 const Facilitator = require("../common/rtc-facilitator");
 const Game = require("./game");
 const Doodle = require("./doodle");
+const styles = require("./styles.css");
 
 class PsychopathApp extends Controller {
 	init() {
@@ -99,8 +102,8 @@ class PsychopathApp extends Controller {
 			this.playerName || "(unnamed)",
 			j({br: 0}),
 			this.playerDoodle ? j({img: {
+				class: styles.bordered,
 				src: this.playerDoodle,
-				style: {border: "1px solid black"},
 			}}) : null,
 		]));
 		for (const peerId in this.facilitator.peers) {
@@ -110,8 +113,8 @@ class PsychopathApp extends Controller {
 				peer.playerName || "(unnamed)",
 				j({br: 0}),
 				doodle ? j({img: {
+					class: styles.bordered,
 					src: doodle,
-					style: {border: "1px solid black"},
 				}}) : null,
 			]));
 		}
