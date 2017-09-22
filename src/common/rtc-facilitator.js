@@ -35,14 +35,6 @@ function createPeer(id, initiator) {
 	});
 
 	this.peers[id].on("connect", () => onConnect.call(this, id));
-
-	//WORKAROUND_HACK: https://github.com/feross/simple-peer/issues/178
-	const WORKAROUND_HACK = (data) => {
-		onConnect.call(this, id);
-		onData.call(this, data, id);
-	};
-	this.peers[id].once("connect", () => this.peers[id].removeListener("data", WORKAROUND_HACK));
-	this.peers[id].once("data", WORKAROUND_HACK);
 }
 
 function onConnect(id) {
@@ -50,11 +42,6 @@ function onConnect(id) {
 	if (!this.peers[id].hasBeenConnected) {
 		this.peers[id].on("data", (data) => onData.call(this, data, id));
 		this.peers[id].hasBeenConnected = true;
-
-		//WORKAROUND_HACK: send a few heartbeats
-		for (let x = 0; x < 20; x++) {
-			setTimeout(() => this.peers[id].send("\u200B"), x * 100);
-		}
 	}
 	if (this._handlers.onConnect instanceof Function) {
 		this._handlers.onConnect(this.peers[id], id);
@@ -62,8 +49,6 @@ function onConnect(id) {
 }
 
 function onData(data, id) {
-	//WORKAROUND_HACK: ignore heartbeats
-	if (data + "" === "\u200B") return;
 	if (this._handlers.onData instanceof Function) {
 		this._handlers.onData(data, this.peers[id], id);
 	}
