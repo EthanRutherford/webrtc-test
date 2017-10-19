@@ -1,26 +1,15 @@
-const {j, Controller, PropTypes: {required}} = require("jenny-js");
+const {Component} = require("react");
+const PropTypes = require("prop-types");
+const j = require("react-jenny");
 const styles = require("./styles.css");
 
-class Doodle extends Controller {
-	init() {
-		return j({div: 0}, [
-			j({canvas: {
-				class: styles.bordered,
-				onmousedown: this.onMouseDown.bind(this),
-				height: 200,
-				width: 200,
-				ref: (ref) => this.canvas = ref,
-			}}),
-			j({br: 0}),
-			j({button: {onclick: this.clear.bind(this)}}, ["clear"]),
-		]);
-	}
-	didMount() {
-		this.context = this.canvas.getContext("2d");
+class Doodle extends Component {
+	componentDidMount() {
+		this.drawingContext = this.canvas.getContext("2d");
 		const hue = ((this.props.id * 5) % 12) * 30;
-		this.context.strokeStyle = `hsl(${hue}, 75%, 40%)`;
-		this.context.lineWidth = 4;
-		this.context.lineCap = "round";
+		this.drawingContext.strokeStyle = `hsl(${hue}, 75%, 40%)`;
+		this.drawingContext.lineWidth = 4;
+		this.drawingContext.lineCap = "round";
 		this.drawing = false;
 
 		this.onMouseMove = this.onMouseMove.bind(this);
@@ -28,7 +17,7 @@ class Doodle extends Controller {
 		window.addEventListener("mousemove", this.onMouseMove);
 		window.addEventListener("mouseup", this.onMouseUp);
 	}
-	didUnMount() {
+	componentWillUnmount() {
 		window.removeEventListener("mouseup", this.onMouseUp);
 		window.removeEventListener("mousemove", this.onMouseMove);
 	}
@@ -39,9 +28,9 @@ class Doodle extends Controller {
 		const x = event.clientX - rect.left;
 		const y = event.clientY - rect.top;
 
-		this.context.beginPath();
-		this.context.moveTo(x, y);
-		this.context.stroke();
+		this.drawingContext.beginPath();
+		this.drawingContext.moveTo(x, y);
+		this.drawingContext.stroke();
 
 		this.props.onChange(this.canvas.toDataURL());
 	}
@@ -51,8 +40,8 @@ class Doodle extends Controller {
 			const x = event.clientX - rect.left;
 			const y = event.clientY - rect.top;
 
-			this.context.lineTo(x, y);
-			this.context.stroke();
+			this.drawingContext.lineTo(x, y);
+			this.drawingContext.stroke();
 
 			this.props.onChange(this.canvas.toDataURL());
 		}
@@ -64,9 +53,9 @@ class Doodle extends Controller {
 			const x = event.clientX - rect.left;
 			const y = event.clientY - rect.top;
 
-			this.context.lineTo(x, y);
-			this.context.stroke();
-			this.context.closePath();
+			this.drawingContext.lineTo(x, y);
+			this.drawingContext.stroke();
+			this.drawingContext.closePath();
 
 			this.props.onChange(this.canvas.toDataURL());
 		}
@@ -74,7 +63,7 @@ class Doodle extends Controller {
 	clear() {
 		const width = this.canvas.width;
 		const height = this.canvas.height;
-		this.context.clearRect(0, 0, width, height);
+		this.drawingContext.clearRect(0, 0, width, height);
 
 		this.props.onChange(this.canvas.toDataURL());
 	}
@@ -89,11 +78,24 @@ class Doodle extends Controller {
 
 		return result;
 	}
+	render() {
+		return j({div: 0}, [
+			j({canvas: {
+				className: styles.bordered,
+				onMouseDown: this.onMouseDown.bind(this),
+				height: 200,
+				width: 200,
+				ref: (ref) => this.canvas = ref,
+			}}),
+			j({br: 0}),
+			j({button: {onClick: this.clear.bind(this)}}, ["clear"]),
+		]);
+	}
 }
 
 Doodle.propTypes = {
-	id: required(Number),
-	onChange: required(Function),
+	id: PropTypes.number.isRequired,
+	onChange: PropTypes.func.isRequired,
 };
 
 module.exports = Doodle;

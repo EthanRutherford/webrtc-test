@@ -1,17 +1,19 @@
 /* global preload */
+const {Component} = require("react");
+const PropTypes = require("prop-types");
+const {render} = require("react-dom");
+const j = require("react-jenny");
 preload.onCss(require("../common/css-loader"));
-const {j, Controller, PropTypes: {required}} = require("jenny-js");
 const {randomInt64, getQueries, throttle} = require("../common/util");
 const Facilitator = require("../common/rtc-facilitator");
 const Game = require("./game");
 const Doodle = require("./doodle");
 const styles = require("./styles.css");
 
-class PsychopathApp extends Controller {
-	init() {
-		return j({div: {ref: (ref) => this.page = ref}});
-	}
-	didMount() {
+class PsychopathApp extends Component {
+	constructor(...args) {
+		super(...args);
+
 		this.facilitator = new Facilitator();
 		this.facilitator.onConnect(this.onConnect.bind(this));
 		this.facilitator.onData(this.onData.bind(this));
@@ -22,60 +24,49 @@ class PsychopathApp extends Controller {
 		} else {
 			this.create();
 		}
+
+		this.state = {
+			connected: false,
+			isCreator: queries.roomId == null,
+			playing: false,
+		};
 	}
 	create() {
 		this.roomId = randomInt64(6);
 		this.facilitator.createRoom(this.roomId);
 		this.linkUrl = location.origin + location.pathname + `?roomId=${this.roomId}`;
-		this.page.content = [
-			j({a: {href: this.linkUrl}}, [this.roomId]),
-			j({br: 0}),
-			j({br: 0}),
-			j({div: 0}, ["send the above link to someone else to connect"]),
-		];
 	}
 	join(data) {
 		this.roomId = data;
 		this.linkUrl = location.origin + location.pathname + `?roomId=${this.roomId}`;
 		this.facilitator.joinRoom(data);
-		this.page.content = [
-			j({div: 0}, ["connecting to peers..."]),
-		];
 	}
 	onConnect(peer) {
-		if (!this.connected) {
-			this.page.content = [
-				j([Lobby, {
-					changeDoodle: this.changeDoodle.bind(this),
-					changeName: this.changeName.bind(this),
-					id: this.facilitator.id,
-					startGame: this.startGame.bind(this, true),
-				}]),
-				j({div: {ref: (ref) => this.list = ref}}),
-			];
-			this.connected = true;
-		}
-		this.renderPlayers();
-		if (this.playerName) {
+		this.setState({
+			connected: true,
+			players: Object.values(this.facilitator.peers),
+		});
+
+		if (this.playerName || this.playerDoodle) {
 			peer.send(JSON.stringify({
 				setName: this.playerName,
-			}));
-		}
-		if (this.playerDoodle) {
-			peer.send(JSON.stringify({
 				setDoodle: this.playerDoodle,
 			}));
 		}
 	}
-	onData(data, peer, id) {
+	onData(data, peer) {
 		const message = JSON.parse(data);
 		if (message.setName != null) {
 			peer.playerName = message.setName;
-			this.renderPlayers();
+			this.setState({
+				players: Object.values(this.facilitator.peers),
+			});
 		}
 		if (message.setDoodle != null) {
 			peer.playerDoodle = message.setDoodle;
-			this.renderPlayers();
+			this.setState({
+				players: Object.values(this.facilitator.peers),
+			});
 		}
 		if (message.startGame) {
 			this.startGame(false);
@@ -86,81 +77,116 @@ class PsychopathApp extends Controller {
 		this.facilitator.broadcast(JSON.stringify({
 			setDoodle: this.playerDoodle,
 		}));
-		this.renderPlayers();
+		this.setState({
+			players: Object.values(this.facilitator.peers),
+		});
 	}
 	changeName(name) {
 		this.playerName = name;
 		this.facilitator.broadcast(JSON.stringify({
 			setName: this.playerName,
 		}));
-		this.renderPlayers();
-	}
-	renderPlayers() {
-		if (!this.list) return;
-		const content = [j({h4: 0}, ["Players"])];
-		content.push(j({div: 0}, [
-			this.playerName || "(unnamed)",
-			j({br: 0}),
-			this.playerDoodle ? j({img: {
-				class: styles.bordered,
-				src: this.playerDoodle,
-			}}) : null,
-		]));
-		for (const peerId in this.facilitator.peers) {
-			const peer = this.facilitator.peers[peerId];
-			const doodle = peer.playerDoodle;
-			content.push(j({div: 0}, [
-				peer.playerName || "(unnamed)",
-				j({br: 0}),
-				doodle ? j({img: {
-					class: styles.bordered,
-					src: doodle,
-				}}) : null,
-			]));
-		}
-		this.list.content = content;
+		this.setState({
+			players: Object.values(this.facilitator.peers),
+		});
 	}
 	startGame(initiator) {
-		this.page.content = [
-			j([Game, {
-				facilitator: this.facilitator,
-				playerName: this.playerName,
-				playerDoodle: this.playerDoodle,
-			}]),
-		];
+		this.setState({playing: true});
 		if (initiator) {
 			this.facilitator.broadcast(JSON.stringify({
 				startGame: true,
 			}));
 		}
 	}
+	renderPlayers() {
+		return j({div: 0}, [
+			j({h4: 0}, ["Players"]),
+			j({div: 0}, [
+				this.playerName || "(unnamed)",
+				j({br: 0}),
+				this.playerDoodle ? j({img: {
+					className: styles.bordered,
+					src: this.playerDoodle,
+				}}) : null,
+			]),
+			...this.state.players.map((peer) => {
+				const doodle = peer.playerDoodle;
+				return j({div: 0}, [
+					peer.playerName || "(unnamed)",
+					j({br: 0}),
+					doodle ? j({img: {
+						className: styles.bordered,
+						src: doodle,
+					}}) : null,
+				]);
+			}),
+		]);
+	}
+	renderWaitArea() {
+		if (!this.state.isCreator) {
+			return j({div: 0}, [
+				"connecting to peers...",
+				j({br: 0}),
+				this.state.error,
+			]);
+		}
+
+		return j({div: 0}, [
+			j({a: {href: this.linkUrl}}, [this.roomId]),
+			j({br: 0}),
+			j({br: 0}),
+			j({div: 0}, ["send the above link to someone else to connect"]),
+			j({br: 0}),
+			this.state.error,
+		]);
+	}
+	render() {
+		if (!this.state.connected) {
+			return this.renderWaitArea();
+		}
+
+		if (!this.state.playing) {
+			return j({div: 0}, [
+				j([Lobby, {
+					changeDoodle: this.changeDoodle.bind(this),
+					changeName: this.changeName.bind(this),
+					id: this.facilitator.id,
+					startGame: this.startGame.bind(this, true),
+				}]),
+				this.renderPlayers(),
+			]);
+		}
+
+		return j([Game, {
+			facilitator: this.facilitator,
+			playerName: this.playerName,
+			playerDoodle: this.playerDoodle,
+		}]);
+	}
 }
 
-class Lobby extends Controller {
-	init() {
+class Lobby extends Component {
+	onChange(event) {
+		this.props.changeName(event.target.value);
+	}
+	render() {
 		return j({div: 0}, [
 			j({input: {
 				placeholder: "your name",
-				oninput: this.onChange.bind(this),
-				ref: (ref) => this.input = ref,
+				onInput: this.onChange.bind(this),
 			}}),
 			j([Doodle, {id: this.props.id, onChange: throttle(this.props.changeDoodle, 50)}]),
 			j({br: 0}),
-			j({button: {onclick: this.props.startGame}}, ["close lobby and begin"]),
+			j({button: {onClick: this.props.startGame}}, ["close lobby and begin"]),
 		]);
-	}
-	onChange() {
-		this.props.changeName(this.input.value);
 	}
 }
 
 Lobby.propTypes = {
-	changeDoodle: required(Function),
-	changeName: required(Function),
-	id: required(Number),
-	startGame: required(Function),
+	changeDoodle: PropTypes.func.isRequired,
+	changeName: PropTypes.func.isRequired,
+	id: PropTypes.number.isRequired,
+	startGame: PropTypes.func.isRequired,
 };
 
-document.body.content = [
-	j([PsychopathApp]),
-];
+render(j(PsychopathApp), document.getElementById("react-root"));

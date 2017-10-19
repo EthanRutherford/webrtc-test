@@ -1,24 +1,26 @@
-const {j, Controller, PropTypes: {required}} = require("jenny-js");
+const {Component} = require("react");
+const PropTypes = require("prop-types");
+const j = require("react-jenny");
 const Facilitator = require("../common/rtc-facilitator");
 
-class Game extends Controller {
-	init() {
-		return j({div: 0}, [
-			"game started woot",
-		]);
-	}
-	didMount() {
+class Game extends Component {
+	componentDidMount() {
 		this.props.facilitator.onData(this.onData.bind(this));
 	}
 	onData(data, peer, id) {
 		console.log(data);
 	}
+	render() {
+		return j({div: 0}, [
+			"game started woot",
+		]);
+	}
 }
 
 Game.propTypes = {
-	facilitator: required(Facilitator),
-	playerName: required(String),
-	playerDoodle: required(String),
+	facilitator: PropTypes.instanceOf(Facilitator).isRequired,
+	playerName: PropTypes.string.isRequired,
+	playerDoodle: PropTypes.string.isRequired,
 };
 
 module.exports = Game;
