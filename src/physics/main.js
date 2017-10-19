@@ -1,5 +1,4 @@
 const {Component} = require("react");
-const PropTypes = require("prop-types");
 const {render} = require("react-dom");
 const j = require("react-jenny");
 const {randomInt64, getQueries} = require("../common/util");
@@ -59,9 +58,11 @@ class PhysicsApp extends Component {
 		]);
 	}
 	render() {
-		return j({div: 0}, [
-			"WIP: coming soon",
-		]);
+		if (!this.state.connected) {
+			return this.renderWaitArea();
+		}
+
+		return j(Game);
 	}
 }
 

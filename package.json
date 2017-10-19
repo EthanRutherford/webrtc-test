@@ -4,8 +4,9 @@
   "description": "just me testing webrtc",
   "main": "",
   "dependencies": {
-    "boxjs": "^1.0.1",
-    "pre-req": "^1.4.2",
+    "2d-gl": "^1.2.1",
+    "boxjs": "^1.0.3",
+    "pre-req": "^1.4.6",
     "prop-types": "^15.6.0",
     "react": "^16.0.0",
     "react-dom": "^16.0.0",
