@@ -4,6 +4,9 @@ const j = require("react-jenny");
 const {randomInt64, getQueries} = require("../common/util");
 const Facilitator = require("../common/rtc-facilitator");
 const Game = require("./game");
+const {physTarget} = require("./util");
+const BMSG = require("./bmsg");
+const {Ping, Pong} = require("./serial");
 
 class PhysicsApp extends Component {
 	constructor(...args) {
@@ -11,8 +14,7 @@ class PhysicsApp extends Component {
 
 		this.facilitator = new Facilitator();
 		this.facilitator.onConnect(this.onConnect.bind(this));
-		// this.facilitator.onData(this.receive.bind(this));
-		// this.facilitator.onError(this.onError.bind(this));
+		this.facilitator.onData(this.onData.bind(this));
 		const queries = getQueries();
 		if (queries.roomId) {
 			this.join(queries.roomId);
@@ -34,10 +36,35 @@ class PhysicsApp extends Component {
 	join(data) {
 		this.roomId = data;
 		this.linkUrl = location.origin + location.pathname + `?roomId=${this.roomId}`;
-		this.facilitator.joinRoom(data);
+		this.facilitator.joinRoom(data, false);
+	}
+	onData(data) {
+		const message = BMSG.parse(data);
+
+		if (message instanceof Pong) {
+			const now = Date.now();
+			const perf = performance.now();
+			const oneWayTime = (now - message.ping) / 2;
+			const offset = now - (message.timestamp + oneWayTime);
+			this.frameZero = message.frameZero + offset;
+
+			const elapsedSeconds = (now - this.frameZero) / 1000;
+			const frameNumber = elapsedSeconds / physTarget;
+			this.frame = Math.floor(frameNumber);
+			const msAgo = (frameNumber - this.frame) / physTarget;
+			this.timestamp = perf - msAgo;
+			this.setState({connected: true});
+		}
 	}
 	onConnect() {
-		this.setState({connected: true});
+		if (this.state.isCreator) {
+			this.setState({connected: true});
+		} else {
+			// make sure the other side is ready to respond quickly
+			setTimeout(() => {
+				this.facilitator.peers[0].send(BMSG.bytify(new Ping()));
+			}, 100);
+		}
 	}
 	renderWaitArea() {
 		if (!this.state.isCreator) {
@@ -62,7 +89,13 @@ class PhysicsApp extends Component {
 			return this.renderWaitArea();
 		}
 
-		return j(Game);
+		return j([Game, {
+			facilitator: this.facilitator,
+			id: this.facilitator.id,
+			frameZero: this.frameZero,
+			initialFrame: this.frame,
+			initialTimestamp: this.timestamp,
+		}]);
 	}
 }
 

@@ -12,6 +12,10 @@ function acceptPeer(data) {
 function createPeer(id, initiator) {
 	this.peers[id] = new Peer({initiator});
 
+	const timeout = setTimeout(() => {
+		this.peers[id].destroy();
+	}, 5000);
+
 	this.peers[id].on("signal", (data) => {
 		this.signaller.send(JSON.stringify({id, data}));
 	});
@@ -34,7 +38,10 @@ function createPeer(id, initiator) {
 		}
 	});
 
-	this.peers[id].on("connect", () => onConnect.call(this, id));
+	this.peers[id].on("connect", () => {
+		clearTimeout(timeout);
+		onConnect.call(this, id);
+	});
 }
 
 function onConnect(id) {
@@ -77,13 +84,14 @@ module.exports = class RTCFacilitator {
 			}
 		};
 	}
-	joinRoom(roomId) {
+	joinRoom(roomId, fullyConnected = true) {
 		const wsUrl = `wss://flixync.rserver.us/signal/receptor/${roomId}`;
 		this.signaller = new WebSocket(wsUrl);
 		this.signaller.onmessage = (message) => {
 			const data = JSON.parse(message.data);
 			if (data.clients != null) {
-				for (const client of data.clients) {
+				const clients = fullyConnected ? data.clients : [0];
+				for (const client of clients) {
 					console.log(`creating connection with peer${client}`);
 					createPeer.call(this, client, true);
 				}
@@ -101,7 +109,10 @@ module.exports = class RTCFacilitator {
 	}
 	broadcast(data) {
 		for (const id in this.peers) {
-			this.peers[id].send(data);
+			const peer = this.peers[id];
+			if (peer.connected) {
+				peer.send(data);
+			}
 		}
 	}
 	onConnect(handler) {

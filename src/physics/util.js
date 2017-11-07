@@ -1,9 +1,10 @@
 const {Math: {Vector2D}, AABB} = require("boxjs");
 
-const getGetVisibleFunc = (getSolver, getScene) => ({x0, y0, x1, y1}) => {
-	const solver = getSolver();
-	const scene = getScene();
+const physTarget = 1 / 45;
+const maxSteps = 100;
 
+const getGetVisibleFunc = (game) => ({x0, y0, x1, y1}) => {
+	const {solver, scene} = game;
 	const visible = [];
 
 	solver.query(new AABB(x0, y0, x1, y1), (shape) => {
@@ -18,10 +19,10 @@ const getGetVisibleFunc = (getSolver, getScene) => ({x0, y0, x1, y1}) => {
 function lerp(a, b, ratio) {
 	return (a * (1 - ratio)) + (b * ratio);
 }
-function vlerp(a, b, ratio) {
+function vLerp(a, b, ratio) {
 	return new Vector2D(lerp(a.x, b.x, ratio), lerp(a.y, b.y, ratio));
 }
-function alerp(a, b, ratio) {
+function aLerp(a, b, ratio) {
 	const diff = Math.abs(a - b);
 	if (diff > Math.PI) {
 		if (a > b) {
@@ -34,7 +35,10 @@ function alerp(a, b, ratio) {
 }
 
 module.exports = {
+	physTarget,
+	maxSteps,
 	getGetVisibleFunc,
-	vlerp,
-	alerp,
+	lerp,
+	vLerp,
+	aLerp,
 };
