@@ -36,7 +36,7 @@ class PhysicsApp extends Component {
 	join(data) {
 		this.roomId = data;
 		this.linkUrl = location.origin + location.pathname + `?roomId=${this.roomId}`;
-		this.facilitator.joinRoom(data, false);
+		this.facilitator.joinRoom(data);
 	}
 	onData(data) {
 		const message = BMSG.parse(data);

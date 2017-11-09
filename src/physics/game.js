@@ -22,7 +22,7 @@ const {ResourceManager} = require("./resources");
 const BMSG = require("./bmsg");
 const {Ping, Pong, BodyState, CreateAction, Message} = require("./serial");
 
-const frameBufferSize = 4;
+const frameBufferSize = 3;
 
 class Game extends Component {
 	componentDidMount() {
@@ -68,18 +68,8 @@ class Game extends Component {
 		// set up data handler
 		this.props.facilitator.onData(this.onData.bind(this));
 
-		// create a box
-		this.actions[this.currentFrame + 10] = {
-			[this.props.id]: new CreateAction(
-				this.myNextBody++, 0, 5, Math.random(),
-			),
-		};
-
-		if (!this.isMaster) {
-			this.props.facilitator.peers[0].send(BMSG.bytify(
-				new Message({}, this.actions, 0),
-			));
-		}
+		// add keydown handler
+		window.addEventListener("keydown", this.onKeyDown.bind(this));
 	}
 	onData(data, peer) {
 		const message = BMSG.parse(data);
@@ -124,6 +114,26 @@ class Game extends Component {
 		if (!(message.frame in this.packets)) {
 			this.packets[message.frame] = message;
 		}
+	}
+	addAction() {
+		const id = this.props.id;
+		const frame = this.currentFrame;
+		const action = new CreateAction(
+			this.myNextBody++, 0, 5, Math.random(),
+		);
+
+		if (!(frame in this.actions)) {
+			this.actions[frame] = {};
+		}
+
+		if (id in this.actions[frame]) {
+			return;
+		}
+
+		this.actions[frame] = {[id]: action};
+		this.props.facilitator.broadcast(BMSG.bytify(
+			new Message({}, {[frame]: {[id]: action}}, 0),
+		));
 	}
 	resolveFrame(solver, packet) {
 		if (packet == null) {
@@ -267,6 +277,11 @@ class Game extends Component {
 					this.createMessage(this.currentFrame),
 				);
 			}
+		}
+	}
+	onKeyDown(event) {
+		if (event.key === "d") {
+			this.addAction();
 		}
 	}
 	render() {

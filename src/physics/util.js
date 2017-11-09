@@ -1,6 +1,6 @@
 const {Math: {Vector2D}, AABB} = require("boxjs");
 
-const physTarget = 1 / 45;
+const physTarget = 1 / 30;
 const maxSteps = 100;
 
 const getGetVisibleFunc = (game) => ({x0, y0, x1, y1}) => {
