@@ -31,12 +31,11 @@ const cyanRect = new VectorMaterial(
 );
 
 class ResourceManager {
-	constructor(solver, renderer, scene) {
-		this.solver = solver;
+	constructor(renderer, scene) {
 		this.renderer = renderer;
 		this.scene = scene;
 	}
-	createBody(params, shape, material, solver = this.solver) {
+	createBody(params, shape, material, solver) {
 		const renderable = this.renderer.getInstance(shape, material);
 		const body = new Body(params);
 
@@ -46,14 +45,14 @@ class ResourceManager {
 
 		return body;
 	}
-	createGround() {
+	createGround(solver) {
 		return this.createBody({
 			position: new Vector2D(0, 0),
 			shapes: [new Polygon().setAsBox(10, .5)],
 			static: true,
-		}, groundShape, yellowRect);
+		}, groundShape, yellowRect, solver);
 	}
-	createBox({x, y, r, vx = 0, vy = 0, vr = 0, solver = this.solver}) {
+	createBox({x, y, r, vx = 0, vy = 0, vr = 0, solver}) {
 		return this.createBody({
 			position: new Vector2D(x, y),
 			angle: r,

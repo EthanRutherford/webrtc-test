@@ -9,7 +9,7 @@ const {
 		OrthoCamera,
 	},
 } = require("2d-gl");
-const {fork, Math: {Vector2D}, Solver} = require("boxjs");
+const {Math: {Vector2D}, Solver} = require("boxjs");
 const Facilitator = require("../common/rtc-facilitator");
 const {
 	physTarget,
@@ -19,6 +19,7 @@ const {
 	aLerp,
 } = require("./util");
 const {ResourceManager} = require("./resources");
+const PhysicsState = require("./physics-state");
 const BMSG = require("./bmsg");
 const {Ping, Pong, BodyState, CreateAction, Message} = require("./serial");
 
@@ -28,9 +29,9 @@ class Game extends Component {
 	componentDidMount() {
 		this.isMaster = this.props.id === 0;
 
-		this.solver = new Solver();
+		const solver = new Solver();
 		const gravityAcceleration = new Vector2D(0, -9.8);
-		this.solver.applyG = (bodies) => {
+		solver.applyG = (bodies) => {
 			for (const body of bodies) {
 				body.applyForce(gravityAcceleration.times(body.mass.m));
 			}
@@ -41,16 +42,15 @@ class Game extends Component {
 		this.camera = new OrthoCamera(0, 0, 20);
 		this.scene.getVisibleFunc = getGetVisibleFunc(this);
 
-		this.resourceManager = new ResourceManager(
-			this.solver, this.renderer, this.scene,
+		const resourceManager = new ResourceManager(
+			this.renderer, this.scene,
 		);
 
-		this.resourceManager.createGround();
-
+		resourceManager.createGround(solver);
 		this.myNextBody = 0;
-		this.peerBodies = {[this.props.id]: {}};
 
-		this.storedFrame = fork(this.solver);
+		this.physicsState = new PhysicsState(solver, {}, resourceManager);
+		this.storedFrame = this.physicsState.clone();
 		this.storedFrameOffset = 0;
 		this.packets = {};
 		this.actions = {};
@@ -135,67 +135,14 @@ class Game extends Component {
 			new Message({}, {[frame]: {[id]: action}}, 0),
 		));
 	}
-	resolveFrame(solver, packet) {
-		if (packet == null) {
-			return;
-		}
-
-		for (const peerId of Object.keys(packet.bodies)) {
-			const peer = packet.bodies[peerId];
-			if (!(peerId in this.peerBodies)) {
-				this.peerBodies[peerId] = {};
-			}
-
-			const ourPeer = this.peerBodies[peerId];
-			for (const bodyId of Object.keys(peer)) {
-				const {x, y, r, vx, vy, vr} = peer[bodyId];
-
-				if (!(bodyId in ourPeer)) {
-					const box = this.resourceManager.createBox({
-						x, y, r, vx, vy, vr, solver,
-					});
-					ourPeer[bodyId] = box.id;
-				} else {
-					const body = solver.bodyMap[ourPeer[bodyId]];
-					body.position.x = x;
-					body.position.y = y;
-					body.transform.radians = r;
-					body.velocity.x = vx;
-					body.velocity.y = vy;
-					body.angularVelocity = vr;
-				}
-			}
-		}
-	}
-	performActions(solver, actions) {
-		if (actions == null) {
-			return;
-		}
-
-		for (const peerId of Object.keys(actions)) {
-			const {id, x, y, r} = actions[peerId];
-			if (!(peerId in this.peerBodies)) {
-				this.peerBodies[peerId] = {};
-			}
-
-			const ourPeer = this.peerBodies[peerId];
-			if (!(id in ourPeer)) {
-				const box = this.resourceManager.createBox({
-					x, y, r, solver,
-				});
-
-				ourPeer[id] = box.id;
-			}
-		}
-	}
 	createMessage(frame) {
 		const bodies = {};
-		for (const peerId of Object.keys(this.peerBodies)) {
-			const peer = this.peerBodies[peerId];
+		for (const peerId of Object.keys(this.physicsState.bodies)) {
+			const peer = this.physicsState.bodies[peerId];
 			bodies[peerId] = {};
 			for (const bodyId of Object.keys(peer)) {
 				bodies[peerId][bodyId] = new BodyState(
-					this.solver.bodyMap[peer[bodyId]],
+					this.physicsState.solver.bodyMap[peer[bodyId]],
 				);
 			}
 		}
@@ -203,7 +150,7 @@ class Game extends Component {
 		return BMSG.bytify(new Message(bodies, this.actions, frame));
 	}
 	gameRender(ratio) {
-		for (const body of this.solver.bodies) {
+		for (const body of this.physicsState.solver.bodies) {
 			const pos = vLerp(body.originalPrevPos, body.originalPosition, ratio);
 			const angle = aLerp(body.prevAngle, body.transform.radians, ratio);
 			for (const shape of body.shapes) {
@@ -235,21 +182,22 @@ class Game extends Component {
 		steps = Math.min(steps, maxSteps);
 
 		for (let i = 0; i < steps; i++) {
-			const solver = this.storedFrame;
+			const state = this.storedFrame;
 			const frameId = this.currentFrame - this.storedFrameOffset;
 
-			this.performActions(solver, this.actions[frameId]);
-			this.resolveFrame(solver, this.packets[frameId]);
+			state.performActions(this.actions[frameId]);
+			state.resolveFrame(this.packets[frameId]);
 			if (this.storedFrameOffset < frameBufferSize) {
-				this.storedFrame = fork(solver);
-				solver.solve(physTarget);
+				this.storedFrame = state.clone();
+				state.solver.solve(physTarget);
 			} else {
-				solver.solve(physTarget);
-				this.storedFrame = fork(solver);
+				state.solver.solve(physTarget);
+				this.storedFrame = state.clone();
 			}
 
 			for (let j = 0; j < this.storedFrameOffset; j++) {
-				solver.solve(physTarget);
+				state.performActions(this.actions[frameId + j + 1]);
+				state.solver.solve(physTarget);
 			}
 
 			if (this.storedFrameOffset < frameBufferSize) {
@@ -260,16 +208,7 @@ class Game extends Component {
 				delete this.actions[idToDrop];
 			}
 
-			for (const body of solver.bodies) {
-				for (const shape of body.shapes) {
-					const origShape = this.solver.shapeMap[shape.id];
-					if (origShape != null) {
-						shape.renderable = origShape.renderable;
-					}
-				}
-			}
-
-			this.solver = solver;
+			this.physicsState = state;
 			this.currentFrame++;
 
 			if (this.isMaster) {

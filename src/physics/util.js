@@ -4,10 +4,10 @@ const physTarget = 1 / 30;
 const maxSteps = 100;
 
 const getGetVisibleFunc = (game) => ({x0, y0, x1, y1}) => {
-	const {solver, scene} = game;
+	const {physicsState, scene} = game;
 	const visible = [];
 
-	solver.query(new AABB(x0, y0, x1, y1), (shape) => {
+	physicsState.solver.query(new AABB(x0, y0, x1, y1), (shape) => {
 		if (scene.has(shape.renderable)) {
 			visible.push(shape.renderable);
 		}
