@@ -8,6 +8,10 @@ const {physTarget} = require("./util");
 const BMSG = require("./bmsg");
 const {Ping, Pong} = require("./serial");
 
+// tmp testing code
+const {generate} = require("./maze");
+const Maze = require("./maze-visualizer");
+
 class PhysicsApp extends Component {
 	constructor(...args) {
 		super(...args);
@@ -27,6 +31,13 @@ class PhysicsApp extends Component {
 			isCreator: queries.roomId == null,
 			playing: false,
 		};
+
+		// tmp testing code
+		window.addEventListener("keydown", (event) => {
+			if (event.key === "m") {
+				this.setState({showMaze: true});
+			}
+		});
 	}
 	create() {
 		this.roomId = randomInt64(6);
@@ -85,16 +96,22 @@ class PhysicsApp extends Component {
 		]);
 	}
 	render() {
+		// tmp testing code
+		if (this.state.showMaze) {
+			return j([Maze, {maze: generate(12, 8, .3)}]);
+		}
+
 		if (!this.state.connected) {
 			return this.renderWaitArea();
 		}
 
 		return j([Game, {
 			facilitator: this.facilitator,
-			id: this.facilitator.id,
 			frameZero: this.frameZero,
+			id: this.facilitator.id,
 			initialFrame: this.frame,
 			initialTimestamp: this.timestamp,
+			roomId: this.roomId,
 		}]);
 	}
 }

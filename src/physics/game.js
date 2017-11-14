@@ -233,10 +233,11 @@ class Game extends Component {
 
 Game.propTypes = {
 	facilitator: PropTypes.instanceOf(Facilitator).isRequired,
-	id: PropTypes.number.isRequired,
 	frameZero: PropTypes.number,
+	id: PropTypes.number.isRequired,
 	initialFrame: PropTypes.number,
 	initialTimestamp: PropTypes.number,
+	roomId: PropTypes.string.isRequired,
 };
 
 module.exports = Game;
