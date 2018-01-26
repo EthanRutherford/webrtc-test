@@ -1,6 +1,6 @@
-const BMSG = require("./bmsg");
+const BMSG = require("../bmsg");
 const {TypedObject} = BMSG.typedContainers;
-const {Float, Uint32, Uint64} = BMSG.types;
+const {Float, Uint8, Uint32, Uint64} = BMSG.types;
 
 class Ping {
 	constructor() {
@@ -159,14 +159,7 @@ BMSG.addType(({concat, getType, bytifyCore, parseCore}) => {
 	return {
 		Type: Message,
 		bytifyFunc: (value) => {
-			const bodies = new TypedObject(TypedObject, {});
-			const keys = Object.keys(value.bodies);
-			for (const key of keys) {
-				bodies.object[key] = new TypedObject(
-					BodyState,
-					value.bodies[key],
-				);
-			}
+			const bodies = new TypedObject(BodyState, value.bodies);
 
 			return concat(
 				bytifyCore(bodies, typedObjectType),
@@ -174,13 +167,80 @@ BMSG.addType(({concat, getType, bytifyCore, parseCore}) => {
 				bytifyCore(value.frame, uint32Type),
 			);
 		},
+		parseFunc: (state) => new Message(
+			parseCore(state, typedObjectType),
+			parseCore(state),
+			parseCore(state, uint32Type),
+		),
+	};
+});
+
+class TankActions {
+	constructor(left, right, up, down, fire) {
+		this.left = left || false;
+		this.right = right || false;
+		this.up = up || false;
+		this.down = down || false;
+		this.fire = fire || false;
+	}
+	copy() {
+		return new TankActions(
+			this.left,
+			this.right,
+			this.up,
+			this.down,
+			this.fire,
+		);
+	}
+}
+
+BMSG.addType(() => {
+	return {
+		Type: TankActions,
+		bytifyFunc: (value) => {
+			return new Uint8Array([
+				0 |
+				(value.left ? 0x1 : 0) |
+				(value.right ? 0x10 : 0) |
+				(value.up ? 0x100 : 0) |
+				(value.down ? 0x1000 : 0) |
+				(value.fire ? 0x10000 : 0),
+			]);
+		},
 		parseFunc: (state) => {
-			return new Message(
-				parseCore(state, typedObjectType),
-				parseCore(state),
-				parseCore(state, uint32Type),
+			const bits = state.array[state.pos++];
+			return new TankActions(
+				(bits & 0x1) !== 0,
+				(bits & 0x10) !== 0,
+				(bits & 0x100) !== 0,
+				(bits & 0x1000) !== 0,
+				(bits & 0x10000) !== 0,
 			);
 		},
+	};
+});
+
+class TankObject {
+	constructor(type, body) {
+		this.type = type;
+		this.body = body;
+	}
+}
+
+BMSG.addType(({concat, getType, bytifyCore, parseCore}) => {
+	const uint8Type = getType(Uint8);
+	const bodyType = getType(BodyState);
+
+	return {
+		Type: TankObject,
+		bytifyFunc: (value) => concat(
+			bytifyCore(value.type, uint8Type),
+			bytifyCore(value.body, bodyType),
+		),
+		parseCore: (state) => new TankObject(
+			parseCore(state, uint8Type),
+			parseCore(state, bodyType),
+		),
 	};
 });
 
@@ -189,5 +249,6 @@ module.exports = {
 	Pong,
 	BodyState,
 	CreateAction,
+	TankActions,
 	Message,
 };

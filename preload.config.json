@@ -4,7 +4,8 @@
 	"entryPoints": [
 		"/webrtc-test/src/chatroom/main",
 		"/webrtc-test/src/physics/main",
-		"/webrtc-test/src/psychopath/main"
+		"/webrtc-test/src/psychopath/main",
+		"/webrtc-test/src/tanks/main"
 	],
 	"html": [{
 		"main": "/webrtc-test/src/chatroom/main",
@@ -18,5 +19,9 @@
 		"main": "/webrtc-test/src/psychopath/main",
 		"html": "/webrtc-test/src/psychopath/index.html",
 		"template": "./.templates/psychopath.html"
+	}, {
+		"main": "/webrtc-test/src/tanks/main",
+		"html": "/webrtc-test/src/tanks/index.html",
+		"template": "./.templates/tanks.html"
 	}]
 }

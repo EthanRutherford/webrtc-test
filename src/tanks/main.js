@@ -8,7 +8,7 @@ const {physTarget} = require("./util");
 const BMSG = require("../bmsg");
 const {Ping, Pong} = require("../common/serial");
 
-class PhysicsApp extends Component {
+class TanksApp extends Component {
 	constructor(...args) {
 		super(...args);
 
@@ -100,4 +100,4 @@ class PhysicsApp extends Component {
 	}
 }
 
-render(j(PhysicsApp), document.getElementById("react-root"));
+render(j(TanksApp), document.getElementById("react-root"));

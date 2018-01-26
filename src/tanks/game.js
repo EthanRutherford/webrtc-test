@@ -9,7 +9,7 @@ const {
 		OrthoCamera,
 	},
 } = require("2d-gl");
-const {Math: {Vector2D}, Solver} = require("boxjs");
+const {Solver} = require("boxjs");
 const Facilitator = require("../common/rtc-facilitator");
 const {
 	physTarget,
@@ -21,7 +21,7 @@ const {
 const {ResourceManager} = require("./resources");
 const PhysicsState = require("./physics-state");
 const BMSG = require("../bmsg");
-const {Ping, Pong, BodyState, CreateAction, Message} = require("../common/serial");
+const {Ping, Pong, BodyState, TankActions, Message} = require("../common/serial");
 
 const frameBufferSize = 3;
 
@@ -30,12 +30,6 @@ class Game extends Component {
 		this.isMaster = this.props.id === 0;
 
 		const solver = new Solver();
-		const gravityAcceleration = new Vector2D(0, -9.8);
-		solver.applyG = (bodies) => {
-			for (const body of bodies) {
-				body.applyForce(gravityAcceleration.times(body.mass.m));
-			}
-		};
 
 		this.renderer = new Renderer(this.canvas);
 		this.scene = new Scene({bgColor: rgba(.1, .1, .1, 1)});
@@ -46,7 +40,7 @@ class Game extends Component {
 			this.renderer, this.scene,
 		);
 
-		resourceManager.createGround(solver);
+		resourceManager.createMaze(this.props.roomId, 0, solver);
 		this.myNextBody = 0;
 
 		this.physicsState = new PhysicsState(solver, {}, resourceManager);
@@ -68,8 +62,10 @@ class Game extends Component {
 		// set up data handler
 		this.props.facilitator.onData(this.onData.bind(this));
 
-		// add keydown handler
+		// add controls handler
+		this.keystate = new TankActions();
 		window.addEventListener("keydown", this.onKeyDown.bind(this));
+		window.addEventListener("keyup", this.onKeyUp.bind(this));
 	}
 	onData(data, peer) {
 		const message = BMSG.parse(data);
@@ -115,22 +111,16 @@ class Game extends Component {
 			this.packets[message.frame] = message;
 		}
 	}
-	addAction() {
+	sendControls() {
 		const id = this.props.id;
 		const frame = this.currentFrame;
-		const action = new CreateAction(
-			this.myNextBody++, 0, 5, Math.random(),
-		);
+		const action = this.keystate.copy();
 
 		if (!(frame in this.actions)) {
 			this.actions[frame] = {};
 		}
 
-		if (id in this.actions[frame]) {
-			return;
-		}
-
-		this.actions[frame] = {[id]: action};
+		this.actions[frame][id] = action;
 		this.props.facilitator.broadcast(BMSG.bytify(
 			new Message({}, {[frame]: {[id]: action}}, 0),
 		));
@@ -179,6 +169,8 @@ class Game extends Component {
 		steps = Math.min(steps, maxSteps);
 
 		for (let i = 0; i < steps; i++) {
+			this.sendControls();
+
 			const state = this.storedFrame;
 			const frameId = this.currentFrame - this.storedFrameOffset;
 
@@ -216,8 +208,29 @@ class Game extends Component {
 		}
 	}
 	onKeyDown(event) {
-		if (event.key === "d") {
-			this.addAction();
+		if (event.key === "w") {
+			this.keystate.up = true;
+		} else if (event.key === "a") {
+			this.keystate.left = true;
+		} else if (event.key === "s") {
+			this.keystate.down = true;
+		} else if (event.key === "d") {
+			this.keystate.right = true;
+		} else if (event.key === " ") {
+			this.keystate.fire = true;
+		}
+	}
+	onKeyUp(event) {
+		if (event.key === "w") {
+			this.keystate.up = false;
+		} else if (event.key === "a") {
+			this.keystate.left = false;
+		} else if (event.key === "s") {
+			this.keystate.down = false;
+		} else if (event.key === "d") {
+			this.keystate.right = false;
+		} else if (event.key === " ") {
+			this.keystate.fire = false;
 		}
 	}
 	render() {

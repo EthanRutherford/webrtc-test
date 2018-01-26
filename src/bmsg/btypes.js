@@ -1,6 +1,6 @@
 // javascript has no differentiation between number types.
 // as such, these all behave the same way, but have different
-// names to allow them to serialize/deserialize efficiently
+// names to allow them to serialize/deserialize correctly
 
 module.exports = {
 	Uint8: class extends Number {},

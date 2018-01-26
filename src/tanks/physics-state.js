@@ -5,6 +5,7 @@ class PhysicsState {
 		this.solver = solver;
 		this.bodies = bodies;
 		this.resourceManager = resourceManager;
+		this.tanks = {};
 	}
 	resolveFrame(packet) {
 		if (packet == null) {
@@ -37,16 +38,7 @@ class PhysicsState {
 		}
 
 		for (const peerId of Object.keys(actions)) {
-			const {id, x, y, r} = actions[peerId];
-			const key = peerId + "-" + id;
-
-			if (!(key in this.bodies)) {
-				const box = this.resourceManager.createBox({
-					x, y, r, solver: this.solver,
-				});
-
-				this.bodies[key] = box.id;
-			}
+			;
 		}
 	}
 	clone() {
