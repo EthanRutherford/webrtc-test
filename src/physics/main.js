@@ -12,9 +12,12 @@ class PhysicsApp extends Component {
 	constructor(...args) {
 		super(...args);
 
+		this.onConnect = this.onConnect.bind(this);
+		this.onData = this.onData.bind(this);
+
 		this.facilitator = new Facilitator();
-		this.facilitator.onConnect(this.onConnect.bind(this));
-		this.facilitator.onData(this.onData.bind(this));
+		this.facilitator.onConnect(this.onConnect);
+		this.facilitator.onData(this.onData);
 		const queries = getQueries();
 		if (queries.roomId) {
 			this.join(queries.roomId);
@@ -54,11 +57,13 @@ class PhysicsApp extends Component {
 			const msAgo = (frameNumber - this.frame) / physTarget;
 			this.timestamp = perf - msAgo;
 			this.setState({connected: true});
+			this.facilitator.offData(this.onData);
 		}
 	}
 	onConnect() {
 		if (this.state.isCreator) {
 			this.setState({connected: true});
+			this.facilitator.offData(this.onData);
 		} else {
 			// make sure the other side is ready to respond quickly
 			setTimeout(() => {

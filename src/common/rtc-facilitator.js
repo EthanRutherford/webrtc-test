@@ -1,74 +1,67 @@
 /* eslint-disable no-console */
-const Peer = require("../common/simple-peer.min");
+const Peer = require("./simple-peer.min");
+const EventHandler = require("./event-handler");
 
-function acceptPeer(data) {
-	if (!this.peers[data.id]) {
+function acceptPeer(facillitator, data) {
+	if (!facillitator.peers[data.id]) {
 		console.log(`negotiating connection with peer${data.id}`);
-		createPeer.call(this, data.id, false);
+		createPeer(facillitator, data.id, false);
 	}
-	this.peers[data.id].signal(data.data);
+	facillitator.peers[data.id].signal(data.data);
 }
 
-function createPeer(id, initiator) {
-	this.peers[id] = new Peer({initiator});
+function createPeer(facillitator, id, initiator) {
+	facillitator.peers[id] = new Peer({initiator});
 
 	const timeout = setTimeout(() => {
-		this.peers[id].destroy();
+		facillitator.peers[id].destroy();
 	}, 5000);
 
-	this.peers[id].on("signal", (data) => {
-		this.signaller.send(JSON.stringify({id, data}));
+	facillitator.peers[id].on("signal", (data) => {
+		facillitator.signaller.send(JSON.stringify({id, data}));
 	});
 
-	this.peers[id].on("close", () => {
+	facillitator.peers[id].on("close", () => {
 		console.log(`connection with peer${id} lost`);
-		this.peers[id].destroy();
-		delete this.peers[id];
-		if (this._handlers.onClose instanceof Function) {
-			this._handlers.onClose(id);
-		}
+		facillitator.peers[id].destroy();
+		delete facillitator.peers[id];
+		facillitator._handlers.onClose.trigger(id);
 	});
 
-	this.peers[id].on("error", (error) => {
+	facillitator.peers[id].on("error", (error) => {
 		console.log(error);
-		this.peers[id].destroy();
-		delete this.peers[id];
-		if (this._handlers.onError instanceof Function) {
-			this._handlers.onError(error, id);
-		}
+		facillitator.peers[id].destroy();
+		delete facillitator.peers[id];
+		facillitator._handlers.onError.trigger(error, id);
 	});
 
-	this.peers[id].on("connect", () => {
+	facillitator.peers[id].on("connect", () => {
 		clearTimeout(timeout);
-		onConnect.call(this, id);
+		onConnect(facillitator, id);
 	});
 }
 
-function onConnect(id) {
+function onConnect(facillitator, id) {
 	console.log(`connection with peer${id} succeeded`);
-	if (!this.peers[id].hasBeenConnected) {
-		this.peers[id].on("data", (data) => onData.call(this, data, id));
-		this.peers[id].hasBeenConnected = true;
+	if (!facillitator.peers[id].hasBeenConnected) {
+		facillitator.peers[id].on("data", (data) => onData(facillitator, data, id));
+		facillitator.peers[id].hasBeenConnected = true;
 	}
-	if (this._handlers.onConnect instanceof Function) {
-		this._handlers.onConnect(this.peers[id], id);
-	}
+	facillitator._handlers.onConnect.trigger(facillitator.peers[id], id);
 }
 
-function onData(data, id) {
-	if (this._handlers.onData instanceof Function) {
-		this._handlers.onData(data, this.peers[id], id);
-	}
+function onData(facillitator, data, id) {
+	facillitator._handlers.onData.trigger(data, facillitator.peers[id], id);
 }
 
 module.exports = class RTCFacilitator {
 	constructor() {
 		this.peers = {};
 		this._handlers = {
-			onConnect: () => {},
-			onClose: () => {},
-			onData: () => {},
-			onError: () => {},
+			onConnect: new EventHandler(),
+			onClose: new EventHandler(),
+			onData: new EventHandler(),
+			onError: new EventHandler(),
 		};
 	}
 	createRoom(roomId) {
@@ -80,7 +73,7 @@ module.exports = class RTCFacilitator {
 				this.id = Number.parseInt(data.yourId, 10);
 			}
 			if (data.id != null && data.data != null) {
-				acceptPeer.call(this, data);
+				acceptPeer(this, data);
 			}
 		};
 	}
@@ -93,14 +86,14 @@ module.exports = class RTCFacilitator {
 				const clients = fullyConnected ? data.clients : [0];
 				for (const client of clients) {
 					console.log(`creating connection with peer${client}`);
-					createPeer.call(this, client, true);
+					createPeer(this, client, true);
 				}
 			}
 			if (data.yourId != null) {
 				this.id = Number.parseInt(data.yourId, 10);
 			}
 			if (data.id != null && data.data != null) {
-				acceptPeer.call(this, data);
+				acceptPeer(this, data);
 			}
 		};
 	}
@@ -116,16 +109,28 @@ module.exports = class RTCFacilitator {
 		}
 	}
 	onConnect(handler) {
-		this._handlers.onConnect = handler;
+		this._handlers.onConnect.add(handler);
+	}
+	offConnect(handler) {
+		this._handlers.onConnect.delete(handler);
 	}
 	onClose(handler) {
-		this._handlers.onClose = handler;
+		this._handlers.onClose.add(handler);
+	}
+	offClose(handler) {
+		this._handlers.onClose.delete(handler);
 	}
 	onData(handler) {
-		this._handlers.onData = handler;
+		this._handlers.onData.add(handler);
+	}
+	offData(handler) {
+		this._handlers.onData.delete(handler);
 	}
 	onError(handler) {
-		this._handlers.onError = handler;
+		this._handlers.onError.add(handler);
+	}
+	offError(handler) {
+		this._handlers.onError.delete(handler);
 	}
 	//local test
 	testLocalStun() {

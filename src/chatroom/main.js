@@ -15,10 +15,14 @@ class ChatApp extends Component {
 	constructor(...args) {
 		super(...args);
 
+		this.onConnect = this.onConnect.bind(this);
+		this.receive = this.receive.bind(this);
+		this.onError = this.onError.bind(this);
+
 		this.facilitator = new Facilitator();
-		this.facilitator.onConnect(this.onConnect.bind(this));
-		this.facilitator.onData(this.receive.bind(this));
-		this.facilitator.onError(this.onError.bind(this));
+		this.facilitator.onConnect(this.onConnect);
+		this.facilitator.onData(this.receive);
+		this.facilitator.onError(this.onError);
 		const queries = getQueries();
 		if (queries.roomId) {
 			this.join(queries.roomId);

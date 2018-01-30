@@ -5,7 +5,8 @@ const Facilitator = require("../common/rtc-facilitator");
 
 class Game extends Component {
 	componentDidMount() {
-		this.props.facilitator.onData(this.onData.bind(this));
+		this.onData = this.onData.bind(this);
+		this.props.facilitator.onData(this.onData);
 	}
 	onData(data, peer, id) {
 		console.log(data);

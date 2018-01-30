@@ -14,10 +14,13 @@ class PsychopathApp extends Component {
 	constructor(...args) {
 		super(...args);
 
+		this.onConnect = this.onConnect.bind(this);
+		this.onConnect = this.onData.bind(this);
+
 		this.facilitator = new Facilitator();
-		this.facilitator.onConnect(this.onConnect.bind(this));
-		this.facilitator.onData(this.onData.bind(this));
-		// this.facilitator.onError(this.onError.bind(this));
+		this.facilitator.onConnect(this.onConnect);
+		this.facilitator.onData(this.onData);
+
 		const queries = getQueries();
 		if (queries.roomId) {
 			this.join(queries.roomId);
@@ -92,6 +95,7 @@ class PsychopathApp extends Component {
 	}
 	startGame(initiator) {
 		this.setState({playing: true});
+		this.facilitator.offData(this.onData);
 		if (initiator) {
 			this.facilitator.broadcast(JSON.stringify({
 				startGame: true,

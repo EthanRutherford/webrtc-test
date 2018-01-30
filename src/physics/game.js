@@ -66,7 +66,8 @@ class Game extends Component {
 		requestAnimationFrame(this.animLoop);
 
 		// set up data handler
-		this.props.facilitator.onData(this.onData.bind(this));
+		this.onData = this.onData.bind(this);
+		this.props.facilitator.onData(this.onData);
 
 		// add keydown handler
 		window.addEventListener("keydown", this.onKeyDown.bind(this));
