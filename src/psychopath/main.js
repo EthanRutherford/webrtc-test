@@ -15,7 +15,7 @@ class PsychopathApp extends Component {
 		super(...args);
 
 		this.onConnect = this.onConnect.bind(this);
-		this.onConnect = this.onData.bind(this);
+		this.onData = this.onData.bind(this);
 
 		this.facilitator = new Facilitator();
 		this.facilitator.onConnect(this.onConnect);

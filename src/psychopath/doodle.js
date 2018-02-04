@@ -4,6 +4,16 @@ const j = require("react-jenny");
 const styles = require("./styles.css");
 
 class Doodle extends Component {
+	constructor(...args) {
+		super(...args);
+		this.onMouseDown = this.onMouseDown.bind(this);
+		this.onMouseMove = this.onMouseMove.bind(this);
+		this.onMouseUp = this.onMouseUp.bind(this);
+		this.onTouchStart = this.onTouchStart.bind(this);
+		this.onTouchMove = this.onTouchMove.bind(this);
+		this.onTouchEnd = this.onTouchEnd.bind(this);
+		this.clear = this.clear.bind(this);
+	}
 	componentDidMount() {
 		this.drawingContext = this.canvas.getContext("2d");
 		const hue = ((this.props.id * 5) % 12) * 30;
@@ -12,21 +22,21 @@ class Doodle extends Component {
 		this.drawingContext.lineCap = "round";
 		this.drawing = false;
 
-		this.onMouseMove = this.onMouseMove.bind(this);
-		this.onMouseUp = this.onMouseUp.bind(this);
 		window.addEventListener("mousemove", this.onMouseMove);
 		window.addEventListener("mouseup", this.onMouseUp);
+		window.addEventListener("touchmove", this.onTouchMove);
+		window.addEventListener("touchend", this.onTouchEnd);
 	}
 	componentWillUnmount() {
-		window.removeEventListener("mouseup", this.onMouseUp);
 		window.removeEventListener("mousemove", this.onMouseMove);
+		window.removeEventListener("mouseup", this.onMouseUp);
+		window.removeEventListener("touchmove", this.onTouchMove);
+		window.removeEventListener("touchend", this.onTouchEnd);
 	}
-	onMouseDown(event) {
-		event.preventDefault();
-		this.drawing = true;
+	handleStart(point) {
 		const rect = this.canvas.getBoundingClientRect();
-		const x = event.clientX - rect.left;
-		const y = event.clientY - rect.top;
+		const x = point.clientX - rect.left;
+		const y = point.clientY - rect.top;
 
 		this.drawingContext.beginPath();
 		this.drawingContext.moveTo(x, y);
@@ -34,16 +44,37 @@ class Doodle extends Component {
 
 		this.props.onChange(this.canvas.toDataURL());
 	}
+	handleMove(point) {
+		const rect = this.canvas.getBoundingClientRect();
+		const x = point.clientX - rect.left;
+		const y = point.clientY - rect.top;
+
+		this.drawingContext.lineTo(x, y);
+		this.drawingContext.stroke();
+
+		this.props.onChange(this.canvas.toDataURL());
+	}
+	handleEnd(point) {
+		const rect = this.canvas.getBoundingClientRect();
+		const x = point.clientX - rect.left;
+		const y = point.clientY - rect.top;
+
+		this.drawingContext.lineTo(x, y);
+		this.drawingContext.stroke();
+		this.drawingContext.closePath();
+
+		this.props.onChange(this.canvas.toDataURL());
+	}
+	onMouseDown(event) {
+		if (event.button === 0) {
+			event.preventDefault();
+			this.drawing = true;
+			this.handleStart(event);
+		}
+	}
 	onMouseMove(event) {
 		if (this.drawing) {
-			const rect = this.canvas.getBoundingClientRect();
-			const x = event.clientX - rect.left;
-			const y = event.clientY - rect.top;
-
-			this.drawingContext.lineTo(x, y);
-			this.drawingContext.stroke();
-
-			this.props.onChange(this.canvas.toDataURL());
+			this.handleMove(event);
 		}
 	}
 	onMouseUp(event) {
@@ -58,6 +89,36 @@ class Doodle extends Component {
 			this.drawingContext.closePath();
 
 			this.props.onChange(this.canvas.toDataURL());
+		}
+	}
+	onTouchStart(event) {
+		if (this.touchIdentifier == null) {
+			const touch = event.changedTouches[0];
+			this.touchIdentifier = touch.identifier;
+			this.handleStart(touch);
+		}
+	}
+	onTouchMove(event) {
+		if (this.touchIdentifier != null) {
+			const touch = Array.from(event.changedTouches).find(
+				(t) => t.identifier === this.touchIdentifier,
+			);
+
+			if (touch) {
+				this.handleMove(touch);
+			}
+		}
+	}
+	onTouchEnd(event) {
+		if (this.touchIdentifier != null) {
+			const touch = Array.from(event.changedTouches).find(
+				(t) => t.identifier === this.touchIdentifier,
+			);
+
+			if (touch) {
+				this.touchIdentifier = null;
+				this.handleEnd(touch);
+			}
 		}
 	}
 	clear() {
@@ -81,14 +142,15 @@ class Doodle extends Component {
 	render() {
 		return j({div: 0}, [
 			j({canvas: {
-				className: styles.bordered,
-				onMouseDown: this.onMouseDown.bind(this),
+				className: styles.doodle,
+				onMouseDown: this.onMouseDown,
+				onTouchStart: this.onTouchStart,
 				height: 200,
 				width: 200,
 				ref: (ref) => this.canvas = ref,
 			}}),
 			j({br: 0}),
-			j({button: {onClick: this.clear.bind(this)}}, ["clear"]),
+			j({button: {onClick: this.clear}}, ["clear"]),
 		]);
 	}
 }
