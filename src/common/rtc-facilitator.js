@@ -65,7 +65,7 @@ module.exports = class RTCFacilitator {
 		};
 	}
 	createRoom(roomId) {
-		const wsUrl = `wss://flixync.rserver.us/signal/initiator/${roomId}`;
+		const wsUrl = `wss://flixync.rutherford.site/signal/initiator/${roomId}`;
 		this.signaller = new WebSocket(wsUrl);
 		this.signaller.onmessage = (message) => {
 			const data = JSON.parse(message.data);
@@ -78,7 +78,7 @@ module.exports = class RTCFacilitator {
 		};
 	}
 	joinRoom(roomId, fullyConnected = true) {
-		const wsUrl = `wss://flixync.rserver.us/signal/receptor/${roomId}`;
+		const wsUrl = `wss://flixync.rutherford.site/signal/receptor/${roomId}`;
 		this.signaller = new WebSocket(wsUrl);
 		this.signaller.onmessage = (message) => {
 			const data = JSON.parse(message.data);
